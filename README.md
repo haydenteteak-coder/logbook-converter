@@ -9,6 +9,23 @@ The app lets you:
 - preview the aircraft table
 - download one final ForeFlight import CSV file
 
+## How to use the converter
+
+1. Log in to SkedPlus+ and export the month you want to log.
+2. In the export options, choose `CSV - as block in decimal`.
+3. Open the converter and upload the CSV file.
+4. Preview the converted entries and make sure they look right.
+5. Download the ForeFlight import CSV.
+6. Open the ForeFlight website, go to `Logbook` > `Import`, and upload the converted file.
+7. Finish the import and verify the entries in your logbook.
+
+Helpful notes:
+
+- Exporting once at the end of each month is usually the easiest workflow.
+- You can export more often, but that may create duplicate entries, so double-check before importing.
+- If you find a bug or something looks wrong, email `HaydenTeteak@gmail.com`.
+- This tool was built from scratch, so there may still be a few mistakes. Please do not hesitate to reach out.
+
 ## 1. Install Python
 
 If you do not already have Python installed:
@@ -112,7 +129,7 @@ The app uses these conversion rules:
 - `Depart -> TimeOut`
 - `Arrive -> TimeIn`
 - `TimeOff` and `TimeOn` stay blank because they are not included in the source CSV
-- each kept flight row gets:
+- every other kept flight row gets:
 - `Takeoff Day = 1`
 - `Landing Full-Stop Day = 1`
 - `Flight` and `Credit` are added to `PilotComments`

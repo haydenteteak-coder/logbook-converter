@@ -474,7 +474,7 @@ def convert_schedule(uploaded_file):
     retained_df["MappedTypeCode"] = retained_df["A/C Type"].apply(_map_aircraft_type)
 
     flight_rows = []
-    for _, row in retained_df.reset_index(drop=True).iterrows():
+    for index, row in retained_df.reset_index(drop=True).iterrows():
         flight_row = _blank_flight_row()
         flight_row["Date"] = _format_foreflight_date(row["Date"])
         flight_row["AircraftID"] = row["Tail"]
@@ -486,8 +486,11 @@ def convert_schedule(uploaded_file):
         flight_row["SIC"] = row["Block"]
         flight_row["CrossCountry"] = row["Block"]
         flight_row["MultiPilot"] = row["Block"]
-        flight_row["Takeoff Day"] = "1"
-        flight_row["Landing Full-Stop Day"] = "1"
+
+        # Mark every other kept leg with one takeoff and one landing.
+        if index % 2 == 0:
+            flight_row["Takeoff Day"] = "1"
+            flight_row["Landing Full-Stop Day"] = "1"
 
         crew_people = _collect_crew_people(row)
         overflow_people = []

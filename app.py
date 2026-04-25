@@ -16,6 +16,25 @@ st.write(
     "and download one ForeFlight import CSV."
 )
 
+with st.expander("How to Use This Converter"):
+    st.markdown(
+        """
+1. Log in to SkedPlus+ and export the month you want to log.
+2. In the export options, choose `CSV - as block in decimal`.
+3. Upload that CSV here.
+4. Preview the converted entries and confirm they look right.
+5. Scroll down and click `Download ForeFlight Import CSV`.
+6. Open the ForeFlight website, go to `Logbook` > `Import`, and upload the converted file.
+7. Complete the import, then review your entries in ForeFlight.
+
+Notes:
+- Doing this once at the end of each month is usually the easiest workflow.
+- You can export more often, but that can create duplicate entries, so double-check before importing.
+- If you run into issues, email `HaydenTeteak@gmail.com` and include a short description of what went wrong.
+- This tool was built from scratch and may still have a few rough edges, so please do not hesitate to report problems.
+"""
+    )
+
 uploaded_file = st.file_uploader("Upload airline schedule CSV", type=["csv"])
 
 if uploaded_file is not None:
