@@ -117,7 +117,7 @@ The app uses these conversion rules:
 - `Landing Full-Stop Day = 1`
 - `Flight` and `Credit` are added to `PilotComments`
 - crew members are exported into ForeFlight `Person1` through `Person6`
-- `Captain -> Person`
+- `Captain -> PIC`
 - `First Officer -> Person`
 - `Flight Attendant -> one or more Person fields`
 - crew employee numbers are preserved in the person name as `Name (EmployeeID)`

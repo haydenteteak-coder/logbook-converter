@@ -85,7 +85,7 @@ AIRCRAFT_DETAILS_MAP = {
 REQUIRED_COLUMNS = ["Date", "A/C Type", "Tail", "Origin", "Dest", "Block"]
 PERSON_COLUMNS = [f"Person{index}" for index in range(1, 7)]
 CREW_SOURCE_COLUMNS = [
-    ("Captain", "Captain"),
+    ("Captain", "PIC"),
     ("First Officer", "First Officer"),
     ("Flight Attendant", "Flight Attendant"),
 ]
@@ -389,14 +389,7 @@ def _build_person_detail(name, role, employee_id=""):
     if employee_id:
         display_name = f"{display_name} ({employee_id})"
 
-    return ";".join(
-        [
-            display_name,
-            _sanitize_packed_detail(role),
-            "",
-            "",
-        ]
-    )
+    return ";".join([display_name, _sanitize_packed_detail(role), ""])
 
 
 def _collect_crew_people(row):
