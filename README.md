@@ -13,7 +13,7 @@ The app lets you:
 
 1. Log in to SkedPlus+ and export the month you want to log.
 2. In the export options, choose `CSV - as block in decimal`.
-3. Optional: enter your employee number or name if you want to override automatic pilot detection.
+3. Choose whether you want the imported time logged as `PIC` or `SIC`.
 4. Open the converter and upload the CSV file.
 5. Preview the converted entries and make sure they look right.
 6. Download the ForeFlight import CSV.
@@ -122,9 +122,8 @@ If any of these columns are missing, the app will show an error message and list
 The app uses these conversion rules:
 
 - `TotalTime = Block`
-- if the logged pilot is listed as `Captain`, `PIC = Block`
-- if the logged pilot is listed as `First Officer`, `SIC = Block`
-- if the app cannot match the logged pilot, the row defaults to `SIC = Block`
+- if you choose `PIC`, every kept row gets `PIC = Block`
+- if you choose `SIC`, every kept row gets `SIC = Block`
 - `CrossCountry = Block`
 - `MultiPilot = Block`
 - `Date` is normalized to `YYYY-MM-DD` for ForeFlight
@@ -140,8 +139,7 @@ The app uses these conversion rules:
 - `First Officer -> Person`
 - `Flight Attendant -> one or more Person fields`
 - crew employee numbers are preserved in the person name as `Name (EmployeeID)`
-- the app auto-detects the primary pilot from the `Captain` and `First Officer` columns, and you can override that in the UI with your name or employee number
-- if auto-detection finds a tie, the app warns you and defaults unmatched rows to `SIC` until you enter your name or employee number
+- the app includes a `PIC / SIC` selector so you can choose how all imported time should be logged before exporting
 - aircraft type mapping:
 - `CR2 -> CRJ2`
 - `CR5 -> CRJ5`
