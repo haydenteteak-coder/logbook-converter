@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.streamlit/secrets.toml
+foreflight_import*.csv
+Thumbs.db
+.DS_Store
+desktop.ini
+
