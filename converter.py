@@ -84,6 +84,7 @@ AIRCRAFT_DETAILS_MAP = {
 
 REQUIRED_COLUMNS = ["Date", "A/C Type", "Tail", "Origin", "Dest", "Block"]
 PERSON_COLUMNS = [f"Person{index}" for index in range(1, 7)]
+PILOT_ROLE_COLUMNS = ["Captain", "First Officer"]
 CREW_SOURCE_COLUMNS = [
     ("Captain", "PIC"),
     ("First Officer", "First Officer"),
@@ -341,6 +342,34 @@ def _default_aircraft_details():
     }
 
 
+def _normalize_person_name(name):
+    return re.sub(r"\s+", " ", _clean_text(name).upper())
+
+
+def _build_crew_member_key(crew_member):
+    employee_id = _clean_text(crew_member.get("employee_id", ""))
+    if employee_id:
+        return f"id:{employee_id}"
+
+    normalized_name = _normalize_person_name(crew_member.get("name", ""))
+    if normalized_name:
+        return f"name:{normalized_name}"
+
+    return ""
+
+
+def _build_crew_member_label(crew_member):
+    name = _clean_text(crew_member.get("name", ""))
+    employee_id = _clean_text(crew_member.get("employee_id", ""))
+    if not name:
+        return ""
+
+    if employee_id:
+        return f"{name} ({employee_id})"
+
+    return name
+
+
 def _normalize_aircraft_type_key(aircraft_type):
     return re.sub(r"[^A-Z0-9]+", "", _clean_text(aircraft_type).upper())
 
@@ -378,6 +407,145 @@ def _parse_crew_members(crew_text):
         return crew_members
 
     return [{"employee_id": "", "name": cleaned_crew}]
+
+
+def _matches_user_identifier(crew_member, user_identifier):
+    cleaned_identifier = _clean_text(user_identifier)
+    if not cleaned_identifier:
+        return False
+
+    employee_id = _clean_text(crew_member.get("employee_id", ""))
+    if employee_id and cleaned_identifier == employee_id:
+        return True
+
+    normalized_identifier = _normalize_person_name(cleaned_identifier)
+    normalized_name = _normalize_person_name(crew_member.get("name", ""))
+
+    if not normalized_name:
+        return False
+
+    return (
+        normalized_identifier == normalized_name
+        or normalized_identifier in normalized_name
+    )
+
+
+def _summarize_pilot_candidates(source_df):
+    pilot_candidates = {}
+
+    for column in PILOT_ROLE_COLUMNS:
+        if column not in source_df.columns:
+            continue
+
+        for crew_text in source_df[column]:
+            for crew_member in _parse_crew_members(crew_text):
+                candidate_key = _build_crew_member_key(crew_member)
+                if not candidate_key:
+                    continue
+
+                if candidate_key not in pilot_candidates:
+                    pilot_candidates[candidate_key] = {
+                        "key": candidate_key,
+                        "name": _clean_text(crew_member.get("name", "")),
+                        "employee_id": _clean_text(
+                            crew_member.get("employee_id", "")
+                        ),
+                        "label": _build_crew_member_label(crew_member),
+                        "count": 0,
+                    }
+
+                pilot_candidates[candidate_key]["count"] += 1
+
+    return pilot_candidates
+
+
+def _resolve_logged_pilot(source_df, user_identifier=""):
+    pilot_candidates = _summarize_pilot_candidates(source_df)
+    if not pilot_candidates:
+        return {
+            "key": "",
+            "label": "",
+            "source": "auto",
+            "matched": False,
+            "ambiguous": False,
+            "options": [],
+        }
+
+    cleaned_identifier = _clean_text(user_identifier)
+    if cleaned_identifier:
+        manual_matches = [
+            candidate
+            for candidate in pilot_candidates.values()
+            if _matches_user_identifier(candidate, cleaned_identifier)
+        ]
+
+        if manual_matches:
+            selected_candidate = max(
+                manual_matches,
+                key=lambda candidate: (
+                    candidate["count"],
+                    candidate["label"],
+                ),
+            )
+            return {
+                "key": selected_candidate["key"],
+                "label": selected_candidate["label"],
+                "source": "manual",
+                "matched": True,
+                "ambiguous": False,
+                "options": [],
+            }
+
+        return {
+            "key": "",
+            "label": cleaned_identifier,
+            "source": "manual",
+            "matched": False,
+            "ambiguous": False,
+            "options": [],
+        }
+
+    highest_count = max(
+        candidate["count"] for candidate in pilot_candidates.values()
+    )
+    top_candidates = [
+        candidate
+        for candidate in pilot_candidates.values()
+        if candidate["count"] == highest_count
+    ]
+
+    if len(top_candidates) > 1:
+        return {
+            "key": "",
+            "label": "",
+            "source": "auto",
+            "matched": False,
+            "ambiguous": True,
+            "options": sorted(candidate["label"] for candidate in top_candidates),
+        }
+
+    selected_candidate = top_candidates[0]
+    return {
+        "key": selected_candidate["key"],
+        "label": selected_candidate["label"],
+        "source": "auto",
+        "matched": True,
+        "ambiguous": False,
+        "options": [],
+    }
+
+
+def _determine_logged_role(row, logged_pilot):
+    if logged_pilot.get("matched"):
+        for crew_member in _parse_crew_members(row.get("Captain", "")):
+            if _build_crew_member_key(crew_member) == logged_pilot["key"]:
+                return "PIC"
+
+        for crew_member in _parse_crew_members(row.get("First Officer", "")):
+            if _build_crew_member_key(crew_member) == logged_pilot["key"]:
+                return "SIC"
+
+    return "SIC"
 
 
 def _sanitize_packed_detail(value):
@@ -437,7 +605,7 @@ def _build_pilot_comments(row, overflow_people):
     return " | ".join(comment_parts)
 
 
-def convert_schedule(uploaded_file):
+def convert_schedule(uploaded_file, user_identifier=""):
     uploaded_file.seek(0)
     source_df = pd.read_csv(uploaded_file, dtype=str).fillna("")
 
@@ -468,12 +636,15 @@ def convert_schedule(uploaded_file):
             working_df[column] = working_df[column].astype(str).str.strip()
 
     input_rows = len(working_df)
+    logged_pilot = _resolve_logged_pilot(working_df, user_identifier)
 
     # Rows without a tail number are skipped completely.
     retained_df = working_df[working_df["Tail"] != ""].copy()
     retained_df["MappedTypeCode"] = retained_df["A/C Type"].apply(_map_aircraft_type)
 
     flight_rows = []
+    pic_rows = 0
+    sic_rows = 0
     for index, row in retained_df.reset_index(drop=True).iterrows():
         flight_row = _blank_flight_row()
         flight_row["Date"] = _format_foreflight_date(row["Date"])
@@ -483,9 +654,16 @@ def convert_schedule(uploaded_file):
         flight_row["TimeOut"] = _format_foreflight_time(row.get("Depart", ""))
         flight_row["TimeIn"] = _format_foreflight_time(row.get("Arrive", ""))
         flight_row["TotalTime"] = row["Block"]
-        flight_row["SIC"] = row["Block"]
         flight_row["CrossCountry"] = row["Block"]
         flight_row["MultiPilot"] = row["Block"]
+
+        logged_role = _determine_logged_role(row, logged_pilot)
+        if logged_role == "PIC":
+            flight_row["PIC"] = row["Block"]
+            pic_rows += 1
+        else:
+            flight_row["SIC"] = row["Block"]
+            sic_rows += 1
 
         # Mark every other kept leg with one takeoff and one landing.
         if index % 2 == 0:
@@ -541,6 +719,13 @@ def convert_schedule(uploaded_file):
         "input_rows": input_rows,
         "kept_rows": kept_rows,
         "skipped_rows": input_rows - kept_rows,
+        "pic_rows": pic_rows,
+        "sic_rows": sic_rows,
+        "logged_pilot_label": logged_pilot["label"],
+        "logged_pilot_source": logged_pilot["source"],
+        "logged_pilot_matched": logged_pilot["matched"],
+        "logged_pilot_ambiguous": logged_pilot["ambiguous"],
+        "logged_pilot_options": logged_pilot["options"],
     }
 
     return flights_df, aircraft_df, stats
