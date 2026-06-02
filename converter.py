@@ -7,6 +7,8 @@ import pandas as pd
 
 AIRCRAFT_MAP = {
     "CR2": "CRJ2",
+    "CRJ": "CRJ2",
+    "CRJ200": "CRJ2",
     "CR5": "CRJ5",
     "CR7": "CRJ7",
     "CR9": "CRJ9",

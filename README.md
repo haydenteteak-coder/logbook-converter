@@ -141,7 +141,7 @@ The app uses these conversion rules:
 - crew employee numbers are preserved in the person name as `Name (EmployeeID)`
 - the app includes a `PIC / SIC` selector so you can choose how all imported time should be logged before exporting
 - aircraft type mapping:
-- `CR2 -> CRJ2`
+- `CR2 / CRJ / CRJ2 / CRJ200 / CRJ 200 -> CRJ2`
 - `CR5 -> CRJ5`
 - `CR7 -> CRJ7`
 - `CR9 -> CRJ9`
